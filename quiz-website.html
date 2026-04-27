@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QuizMind — Test Your Knowledge</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d0d10;
+    --bg2: #13131a;
+    --bg3: #1a1a24;
+    --card: #1e1e2a;
+    --border: rgba(255,255,255,0.08);
+    --border-hover: rgba(255,255,255,0.18);
+    --text: #f0f0f5;
+    --muted: #8888aa;
+    --accent-gk: #c8a96e;
+    --accent-sci: #6eb5c8;
+    --accent-gk-dim: rgba(200,169,110,0.15);
+    --accent-sci-dim: rgba(110,181,200,0.15);
+    --correct: #5cb887;
+    --wrong: #c86e6e;
+    --correct-dim: rgba(92,184,135,0.12);
+    --wrong-dim: rgba(200,110,110,0.12);
+    --radius: 14px;
+    --font-display: 'DM Serif Display', serif;
+    --font-body: 'DM Sans', sans-serif;
+  }
+
+  body {
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  /* ── NAV ── */
+  nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1.2rem 2.5rem;
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(13,13,16,0.92);
+    backdrop-filter: blur(12px);
+  }
+  .nav-logo {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    letter-spacing: 0.02em;
+    color: var(--text);
+  }
+  .nav-logo span { color: var(--accent-gk); font-style: italic; }
+  .nav-tabs { display: flex; gap: 4px; }
+  .nav-tab {
+    padding: 6px 18px; border-radius: 8px; font-size: 13px;
+    font-weight: 500; cursor: pointer; border: none;
+    background: transparent; color: var(--muted);
+    transition: all 0.2s;
+  }
+  .nav-tab:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+  .nav-tab.active { color: var(--text); background: rgba(255,255,255,0.09); }
+
+  /* ── SCREENS ── */
+  .screen { display: none; animation: fadeIn 0.3s ease; }
+  .screen.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ── HOME ── */
+  .home-hero {
+    text-align: center;
+    padding: 5rem 2rem 3rem;
+  }
+  .home-hero h1 {
+    font-family: var(--font-display);
+    font-size: clamp(2.4rem, 5vw, 4rem);
+    line-height: 1.15;
+    margin-bottom: 1rem;
+  }
+  .home-hero h1 em { color: var(--accent-gk); }
+  .home-hero p { color: var(--muted); font-size: 1.05rem; max-width: 480px; margin: 0 auto 2.5rem; }
+
+  .quiz-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.25rem;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 2rem 4rem;
+  }
+
+  .quiz-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.75rem;
+    cursor: pointer;
+    transition: all 0.25s;
+    position: relative;
+    overflow: hidden;
+  }
+  .quiz-card::before {
+    content: '';
+    position: absolute; inset: 0;
+    opacity: 0; transition: opacity 0.25s;
+  }
+  .quiz-card.gk::before { background: var(--accent-gk-dim); }
+  .quiz-card.sci::before { background: var(--accent-sci-dim); }
+  .quiz-card:hover { border-color: var(--border-hover); transform: translateY(-3px); }
+  .quiz-card:hover::before { opacity: 1; }
+
+  .card-tag {
+    display: inline-block;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
+    text-transform: uppercase; padding: 3px 10px;
+    border-radius: 5px; margin-bottom: 1rem;
+  }
+  .gk .card-tag { color: var(--accent-gk); background: var(--accent-gk-dim); border: 1px solid rgba(200,169,110,0.3); }
+  .sci .card-tag { color: var(--accent-sci); background: var(--accent-sci-dim); border: 1px solid rgba(110,181,200,0.3); }
+
+  .card-icon { font-size: 2rem; margin-bottom: 0.75rem; }
+  .quiz-card h2 { font-family: var(--font-display); font-size: 1.4rem; margin-bottom: 0.5rem; }
+  .quiz-card p { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.25rem; }
+  .card-meta { display: flex; gap: 1rem; font-size: 12px; color: var(--muted); }
+  .card-meta span::before { margin-right: 4px; }
+
+  .start-btn {
+    margin-top: 1.5rem;
+    padding: 10px 22px; border-radius: 8px;
+    font-size: 13px; font-weight: 600;
+    cursor: pointer; border: none;
+    transition: all 0.2s; letter-spacing: 0.04em;
+  }
+  .gk .start-btn { background: var(--accent-gk); color: #1a1408; }
+  .sci .start-btn { background: var(--accent-sci); color: #081318; }
+  .start-btn:hover { opacity: 0.88; transform: scale(1.02); }
+
+  /* ── QUIZ SCREEN ── */
+  .quiz-container {
+    max-width: 700px; margin: 0 auto;
+    padding: 2.5rem 2rem 4rem;
+  }
+
+  .quiz-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 2rem;
+  }
+  .quiz-back {
+    background: none; border: 1px solid var(--border);
+    color: var(--muted); padding: 7px 14px;
+    border-radius: 8px; font-size: 13px; cursor: pointer;
+    font-family: var(--font-body); transition: all 0.2s;
+  }
+  .quiz-back:hover { border-color: var(--border-hover); color: var(--text); }
+
+  .quiz-progress-wrap { flex: 1; margin: 0 1.5rem; }
+  .quiz-progress-label { font-size: 12px; color: var(--muted); margin-bottom: 5px; text-align: right; }
+  .progress-bar { height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 2px; transition: width 0.4s ease; }
+  .gk-quiz .progress-fill { background: var(--accent-gk); }
+  .sci-quiz .progress-fill { background: var(--accent-sci); }
+
+  .question-num { font-size: 12px; color: var(--muted); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.08em; }
+  .question-text {
+    font-family: var(--font-display);
+    font-size: clamp(1.2rem, 2.5vw, 1.6rem);
+    line-height: 1.35; margin-bottom: 2rem;
+  }
+
+  .options-grid { display: grid; gap: 10px; margin-bottom: 2rem; }
+  .option-btn {
+    background: var(--card); border: 1px solid var(--border);
+    color: var(--text); padding: 1rem 1.25rem;
+    border-radius: 10px; font-size: 0.95rem;
+    font-family: var(--font-body); cursor: pointer;
+    transition: all 0.2s; text-align: left;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .option-letter {
+    width: 28px; height: 28px; border-radius: 6px;
+    background: rgba(255,255,255,0.06);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 600; flex-shrink: 0;
+    transition: all 0.2s;
+  }
+  .option-btn:hover:not(:disabled) { border-color: var(--border-hover); background: rgba(255,255,255,0.04); }
+  .option-btn.correct { background: var(--correct-dim); border-color: var(--correct); }
+  .option-btn.correct .option-letter { background: var(--correct); color: #0d1f15; }
+  .option-btn.wrong { background: var(--wrong-dim); border-color: var(--wrong); }
+  .option-btn.wrong .option-letter { background: var(--wrong); color: #1f0d0d; }
+  .option-btn.reveal { background: var(--correct-dim); border-color: rgba(92,184,135,0.4); }
+  .option-btn.reveal .option-letter { background: rgba(92,184,135,0.3); color: var(--correct); }
+  .option-btn:disabled { cursor: not-allowed; }
+
+  .explanation {
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 10px; padding: 1rem 1.25rem;
+    font-size: 0.9rem; color: var(--muted);
+    margin-bottom: 1.5rem; line-height: 1.6;
+    animation: fadeIn 0.3s ease;
+  }
+  .explanation strong { color: var(--text); }
+
+  .next-btn {
+    padding: 12px 28px; border-radius: 9px;
+    font-size: 14px; font-weight: 600;
+    cursor: pointer; border: none;
+    font-family: var(--font-body);
+    transition: all 0.2s; letter-spacing: 0.04em;
+  }
+  .gk-quiz .next-btn { background: var(--accent-gk); color: #1a1408; }
+  .sci-quiz .next-btn { background: var(--accent-sci); color: #081318; }
+  .next-btn:hover { opacity: 0.88; }
+
+  /* ── RESULT ── */
+  .result-container {
+    max-width: 560px; margin: 0 auto;
+    padding: 4rem 2rem; text-align: center;
+  }
+  .result-ring {
+    width: 130px; height: 130px;
+    margin: 0 auto 2rem;
+    position: relative;
+  }
+  .result-ring svg { transform: rotate(-90deg); }
+  .result-ring-bg { fill: none; stroke: rgba(255,255,255,0.06); stroke-width: 10; }
+  .result-ring-fill { fill: none; stroke-width: 10; stroke-linecap: round; transition: stroke-dashoffset 1s ease; }
+  .result-score-text {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    font-family: var(--font-display); font-size: 2rem; line-height: 1;
+  }
+  .result-title { font-family: var(--font-display); font-size: 1.8rem; margin-bottom: 0.75rem; }
+  .result-sub { color: var(--muted); margin-bottom: 2.5rem; }
+
+  .result-breakdown {
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px; margin-bottom: 2.5rem;
+  }
+  .breakdown-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 1rem;
+  }
+  .breakdown-val { font-size: 1.6rem; font-weight: 600; margin-bottom: 2px; }
+  .breakdown-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .b-correct .breakdown-val { color: var(--correct); }
+  .b-wrong .breakdown-val { color: var(--wrong); }
+
+  .result-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .btn-outline {
+    padding: 11px 22px; border-radius: 9px;
+    font-size: 13px; font-weight: 600;
+    cursor: pointer; font-family: var(--font-body);
+    background: none; border: 1px solid var(--border);
+    color: var(--text); transition: all 0.2s;
+  }
+  .btn-outline:hover { border-color: var(--border-hover); background: rgba(255,255,255,0.04); }
+  .btn-primary {
+    padding: 11px 22px; border-radius: 9px;
+    font-size: 13px; font-weight: 600;
+    cursor: pointer; font-family: var(--font-body);
+    border: none; transition: all 0.2s;
+  }
+  .btn-primary:hover { opacity: 0.88; }
+
+  /* ── DASHBOARD ── */
+  .dashboard {
+    max-width: 920px; margin: 0 auto;
+    padding: 2.5rem 2rem 4rem;
+  }
+  .dash-title {
+    font-family: var(--font-display);
+    font-size: 1.8rem; margin-bottom: 0.4rem;
+  }
+  .dash-sub { color: var(--muted); font-size: 0.9rem; margin-bottom: 2.5rem; }
+
+  .stats-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px; margin-bottom: 2rem;
+  }
+  .stat-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1.25rem;
+  }
+  .stat-val { font-size: 1.8rem; font-weight: 600; line-height: 1; margin-bottom: 4px; }
+  .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; }
+
+  .dash-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 14px; margin-bottom: 1.5rem;
+  }
+  @media (max-width: 600px) { .dash-grid { grid-template-columns: 1fr; } }
+
+  .dash-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1.5rem;
+  }
+  .dash-card-title { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 1.25rem; }
+
+  .quiz-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 0; border-bottom: 1px solid var(--border);
+  }
+  .quiz-row:last-child { border-bottom: none; }
+  .qr-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .qr-name { flex: 1; font-size: 14px; }
+  .qr-score { font-size: 13px; font-weight: 600; }
+  .qr-attempts { font-size: 11px; color: var(--muted); }
+
+  .bar-item { margin-bottom: 14px; }
+  .bar-header { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; }
+  .bar-label { color: var(--text); }
+  .bar-pct { color: var(--muted); }
+  .bar-track { height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 3px; transition: width 1s ease; }
+
+  .activity-list { display: flex; flex-direction: column; gap: 8px; }
+  .activity-item {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 13px; color: var(--muted);
+  }
+  .activity-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .activity-item strong { color: var(--text); }
+
+  .empty-dash {
+    text-align: center; padding: 3rem 1rem;
+    color: var(--muted); font-size: 0.9rem;
+  }
+  .empty-dash p { margin-bottom: 1rem; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 540px) {
+    nav { padding: 1rem 1.2rem; }
+    .quiz-grid { padding: 0 1.2rem 3rem; }
+    .quiz-container, .result-container, .dashboard { padding: 1.5rem 1.2rem 3rem; }
+    .dash-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">Quiz<span>Mind</span></div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showScreen('home')">Quizzes</button>
+    <button class="nav-tab" onclick="showScreen('dashboard')">Dashboard</button>
+  </div>
+</nav>
+
+<!-- HOME -->
+<div id="screen-home" class="screen active">
+  <div class="home-hero">
+    <h1>Test Your <em>Knowledge</em><br>Every Day</h1>
+    <p>Four handcrafted quizzes — general knowledge & science — to sharpen your mind.</p>
+  </div>
+  <div class="quiz-grid" id="quiz-grid"></div>
+</div>
+
+<!-- QUIZ -->
+<div id="screen-quiz" class="screen">
+  <div class="quiz-container" id="quiz-container">
+    <div class="quiz-header">
+      <button class="quiz-back" onclick="showScreen('home')">← Back</button>
+      <div class="quiz-progress-wrap">
+        <div class="quiz-progress-label" id="progress-label">1 / 8</div>
+        <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+      </div>
+    </div>
+    <div id="question-area"></div>
+  </div>
+</div>
+
+<!-- RESULT -->
+<div id="screen-result" class="screen">
+  <div class="result-container">
+    <div class="result-ring">
+      <svg viewBox="0 0 130 130" width="130" height="130">
+        <circle class="result-ring-bg" cx="65" cy="65" r="55"/>
+        <circle class="result-ring-fill" id="ring-fill" cx="65" cy="65" r="55"
+          stroke-dasharray="345.4" stroke-dashoffset="345.4"/>
+      </svg>
+      <div class="result-score-text" id="result-score-text">0%</div>
+    </div>
+    <div class="result-title" id="result-title">—</div>
+    <div class="result-sub" id="result-sub">—</div>
+    <div class="result-breakdown">
+      <div class="breakdown-card b-correct">
+        <div class="breakdown-val" id="res-correct">0</div>
+        <div class="breakdown-label">Correct</div>
+      </div>
+      <div class="breakdown-card b-wrong">
+        <div class="breakdown-val" id="res-wrong">0</div>
+        <div class="breakdown-label">Wrong</div>
+      </div>
+      <div class="breakdown-card">
+        <div class="breakdown-val" id="res-total">0</div>
+        <div class="breakdown-label">Total</div>
+      </div>
+    </div>
+    <div class="result-actions">
+      <button class="btn-outline" onclick="retryQuiz()">Retry Quiz</button>
+      <button class="btn-primary" id="result-cta" onclick="showScreen('home')">More Quizzes</button>
+    </div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="screen-dashboard" class="screen">
+  <div class="dashboard">
+    <div class="dash-title">Dashboard</div>
+    <div class="dash-sub">Your quiz performance at a glance.</div>
+    <div id="dash-content"></div>
+  </div>
+</div>
+
+<script>
+const QUIZZES = [
+  {
+    id: 'gk1', type: 'gk', title: 'World General Knowledge',
+    desc: 'Countries, capitals, history & global trivia.',
+    icon: '🌍', questions: 8,
+    questions_data: [
+      { q: 'What is the capital city of Australia?', opts: ['Sydney','Melbourne','Canberra','Brisbane'], ans: 2, exp: 'Canberra is the capital of Australia, chosen as a compromise between Sydney and Melbourne.' },
+      { q: 'Which river is the longest in the world?', opts: ['Amazon','Nile','Yangtze','Mississippi'], ans: 1, exp: 'The Nile stretches approximately 6,650 km through northeastern Africa.' },
+      { q: 'In which year did the Berlin Wall fall?', opts: ['1987','1989','1991','1993'], ans: 1, exp: 'The Berlin Wall fell on November 9, 1989, marking the beginning of German reunification.' },
+      { q: 'Which country has the most natural lakes?', opts: ['USA','Russia','Brazil','Canada'], ans: 3, exp: 'Canada has more lakes than any other country — over 60% of the world\'s freshwater lakes.' },
+      { q: 'What is the smallest country in the world by area?', opts: ['Monaco','San Marino','Vatican City','Liechtenstein'], ans: 2, exp: 'Vatican City covers just 0.44 km², making it the world\'s smallest sovereign state.' },
+      { q: 'Which ocean is the largest on Earth?', opts: ['Atlantic','Indian','Arctic','Pacific'], ans: 3, exp: 'The Pacific Ocean covers about 165 million km², nearly half the world\'s ocean surface.' },
+      { q: 'Who wrote "Pride and Prejudice"?', opts: ['Charlotte Brontë','Jane Austen','George Eliot','Mary Shelley'], ans: 1, exp: 'Jane Austen published Pride and Prejudice in 1813. It remains one of the most beloved novels.' },
+      { q: 'Which ancient wonder still exists today?', opts: ['Hanging Gardens','Colossus of Rhodes','Great Pyramid of Giza','Lighthouse of Alexandria'], ans: 2, exp: 'The Great Pyramid of Giza is the only ancient wonder of the world still largely intact.' }
+    ]
+  },
+  {
+    id: 'gk2', type: 'gk', title: 'Culture & Arts',
+    desc: 'Literature, art, music & cultural heritage.',
+    icon: '🎨', questions: 8,
+    questions_data: [
+      { q: 'Who painted the Mona Lisa?', opts: ['Michelangelo','Raphael','Leonardo da Vinci','Caravaggio'], ans: 2, exp: 'Leonardo da Vinci painted the Mona Lisa around 1503–1519. It is housed in the Louvre, Paris.' },
+      { q: 'Which Shakespeare play features the characters Rosencrantz and Guildenstern?', opts: ['Macbeth','Hamlet','Othello','King Lear'], ans: 1, exp: 'Rosencrantz and Guildenstern appear in Hamlet as childhood friends of the Danish prince.' },
+      { q: 'In music, how many semitones are in an octave?', opts: ['8','10','12','16'], ans: 2, exp: 'An octave contains 12 semitones (half steps) in Western music\'s chromatic scale.' },
+      { q: 'Which country is the origin of the Tango dance?', opts: ['Spain','Cuba','Argentina','Brazil'], ans: 2, exp: 'Tango originated in the Río de la Plata region, primarily Buenos Aires, Argentina, in the late 19th century.' },
+      { q: 'What is the world\'s best-selling book of all time (excluding religious texts)?', opts: ['Don Quixote','A Tale of Two Cities','The Lord of the Rings','Harry Potter series'], ans: 0, exp: 'Don Quixote by Miguel de Cervantes (1605) is considered the world\'s best-selling novel with over 500 million copies.' },
+      { q: 'Which artist created "The Starry Night"?', opts: ['Claude Monet','Paul Gauguin','Vincent van Gogh','Édouard Manet'], ans: 2, exp: 'Vincent van Gogh painted The Starry Night in June 1889 while at the Saint-Paul-de-Mausole asylum.' },
+      { q: 'The Taj Mahal was built by which Mughal emperor?', opts: ['Akbar','Aurangzeb','Shah Jahan','Humayun'], ans: 2, exp: 'Emperor Shah Jahan commissioned the Taj Mahal in 1632 as a mausoleum for his wife Mumtaz Mahal.' },
+      { q: 'Which film won the first ever Academy Award for Best Picture?', opts: ['Wings','Sunrise','The Jazz Singer','All Quiet on the Western Front'], ans: 0, exp: 'Wings (1927) won the first Academy Award for Outstanding Picture at the inaugural ceremony in 1929.' }
+    ]
+  },
+  {
+    id: 'sci1', type: 'sci', title: 'Physics & Space',
+    desc: 'Explore the cosmos and the laws of physics.',
+    icon: '🔭', questions: 8,
+    questions_data: [
+      { q: 'What is the speed of light in a vacuum?', opts: ['300,000 km/s','150,000 km/s','450,000 km/s','1,000,000 km/s'], ans: 0, exp: 'Light travels at approximately 299,792 km/s (often rounded to 300,000 km/s) in a vacuum.' },
+      { q: 'Which planet has the most moons in our solar system?', opts: ['Jupiter','Saturn','Uranus','Neptune'], ans: 1, exp: 'As of 2024, Saturn leads with 146 confirmed moons, surpassing Jupiter\'s count.' },
+      { q: 'What is the unit of electrical resistance?', opts: ['Volt','Ampere','Ohm','Watt'], ans: 2, exp: 'The Ohm (Ω) is the SI unit of electrical resistance, named after physicist Georg Simon Ohm.' },
+      { q: 'Which force keeps planets in orbit around the Sun?', opts: ['Electromagnetic force','Gravity','Nuclear force','Centrifugal force'], ans: 1, exp: 'Gravity, described by Newton\'s law of universal gravitation, keeps planets in elliptical orbits around the Sun.' },
+      { q: 'What is the half-life of Carbon-14?', opts: ['5,730 years','1,000 years','10,000 years','57,300 years'], ans: 0, exp: 'Carbon-14 has a half-life of 5,730 years, making it useful for radiocarbon dating of organic materials.' },
+      { q: 'Which scientist formulated the theory of general relativity?', opts: ['Isaac Newton','Niels Bohr','Max Planck','Albert Einstein'], ans: 3, exp: 'Albert Einstein published his general theory of relativity in 1915, describing gravity as spacetime curvature.' },
+      { q: 'What is the closest star to our Solar System?', opts: ['Sirius','Proxima Centauri','Vega','Betelgeuse'], ans: 1, exp: 'Proxima Centauri is about 4.24 light-years from Earth — the closest known star to our Sun.' },
+      { q: 'What does "E=mc²" represent?', opts: ['Energy equals mass times the speed of sound squared','Energy equals mass times the speed of light squared','Entropy equals mass times curvature','None of the above'], ans: 1, exp: 'Einstein\'s mass-energy equivalence formula: energy equals mass times the speed of light (c) squared.' }
+    ]
+  },
+  {
+    id: 'sci2', type: 'sci', title: 'Biology & Life Sciences',
+    desc: 'Cells, evolution, genetics & living systems.',
+    icon: '🧬', questions: 8,
+    questions_data: [
+      { q: 'What is the powerhouse of the cell?', opts: ['Nucleus','Ribosome','Mitochondria','Golgi apparatus'], ans: 2, exp: 'Mitochondria produce ATP through cellular respiration, supplying energy for the cell\'s functions.' },
+      { q: 'How many base pairs are in the human genome?', opts: ['3 million','30 million','3 billion','30 billion'], ans: 2, exp: 'The human genome contains approximately 3 billion base pairs of DNA distributed across 23 chromosomes.' },
+      { q: 'Which blood type is the universal donor?', opts: ['A+','B-','O-','AB+'], ans: 2, exp: 'O- (O negative) red blood cells can be transfused to patients of any blood type in emergencies.' },
+      { q: 'What is the process by which plants make food using sunlight?', opts: ['Respiration','Fermentation','Photosynthesis','Transpiration'], ans: 2, exp: 'Photosynthesis converts light energy, water, and CO₂ into glucose and oxygen using chlorophyll.' },
+      { q: 'Which organ produces insulin?', opts: ['Liver','Kidney','Pancreas','Spleen'], ans: 2, exp: 'The pancreas produces insulin in its beta cells within the islets of Langerhans to regulate blood sugar.' },
+      { q: 'What is the largest organ in the human body?', opts: ['Liver','Brain','Intestines','Skin'], ans: 3, exp: 'Skin is the largest organ, covering about 2 m² and weighing 3–5 kg in an average adult.' },
+      { q: 'Who proposed the theory of evolution by natural selection?', opts: ['Gregor Mendel','Louis Pasteur','Charles Darwin','Alfred Russel Wallace'], ans: 2, exp: 'Charles Darwin published "On the Origin of Species" in 1859, outlining natural selection as the mechanism of evolution.' },
+      { q: 'What is the name of the protein that carries oxygen in red blood cells?', opts: ['Myosin','Collagen','Hemoglobin','Keratin'], ans: 2, exp: 'Hemoglobin is an iron-containing protein in red blood cells that binds and transports oxygen throughout the body.' }
+    ]
+  }
+];
+
+let state = {
+  currentQuiz: null,
+  currentQ: 0,
+  score: 0,
+  answered: false,
+  stats: JSON.parse(localStorage.getItem('quizmind_stats') || '{}'),
+  lastResult: null
+};
+
+function saveStats() {
+  localStorage.setItem('quizmind_stats', JSON.stringify(state.stats));
+}
+
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  const idx = name === 'dashboard' ? 1 : 0;
+  document.querySelectorAll('.nav-tab')[idx].classList.add('active');
+  if (name === 'dashboard') renderDashboard();
+  window.scrollTo(0, 0);
+}
+
+// ── RENDER HOME ──
+function renderHome() {
+  const grid = document.getElementById('quiz-grid');
+  grid.innerHTML = QUIZZES.map(q => {
+    const st = state.stats[q.id];
+    const bestPct = st ? Math.round((st.best / q.questions) * 100) : null;
+    return `
+    <div class="quiz-card ${q.type}" onclick="startQuiz('${q.id}')">
+      <div class="card-tag">${q.type === 'gk' ? 'General Knowledge' : 'Science'}</div>
+      <div class="card-icon">${q.icon}</div>
+      <h2>${q.title}</h2>
+      <p>${q.desc}</p>
+      <div class="card-meta">
+        <span>📋 ${q.questions} questions</span>
+        ${bestPct !== null ? `<span>🏆 Best: ${bestPct}%</span>` : '<span>🔓 Not attempted</span>'}
+        ${st ? `<span>🔁 ${st.attempts} attempt${st.attempts > 1 ? 's' : ''}</span>` : ''}
+      </div>
+      <button class="start-btn">${st ? 'Play Again' : 'Start Quiz'} →</button>
+    </div>`;
+  }).join('');
+}
+
+// ── START QUIZ ──
+function startQuiz(id) {
+  state.currentQuiz = QUIZZES.find(q => q.id === id);
+  state.currentQ = 0;
+  state.score = 0;
+  state.answered = false;
+  showScreen('quiz');
+  const c = document.getElementById('quiz-container');
+  c.className = 'quiz-container ' + (state.currentQuiz.type === 'gk' ? 'gk-quiz' : 'sci-quiz');
+  renderQuestion();
+}
+
+function retryQuiz() {
+  startQuiz(state.currentQuiz.id);
+}
+
+// ── RENDER QUESTION ──
+function renderQuestion() {
+  const quiz = state.currentQuiz;
+  const qi = state.currentQ;
+  const q = quiz.questions_data[qi];
+  state.answered = false;
+
+  const pct = (qi / quiz.questions_data.length) * 100;
+  document.getElementById('progress-label').textContent = `${qi + 1} / ${quiz.questions_data.length}`;
+  document.getElementById('progress-fill').style.width = pct + '%';
+
+  const letters = ['A','B','C','D'];
+  document.getElementById('question-area').innerHTML = `
+    <div class="question-num">${quiz.icon} ${quiz.title} · Question ${qi + 1}</div>
+    <div class="question-text">${q.q}</div>
+    <div class="options-grid">
+      ${q.opts.map((o, i) => `
+        <button class="option-btn" onclick="selectAnswer(${i})" data-idx="${i}">
+          <span class="option-letter">${letters[i]}</span>
+          <span>${o}</span>
+        </button>
+      `).join('')}
+    </div>
+    <div id="explanation" style="display:none"></div>
+    <div id="next-wrap" style="display:none">
+      <button class="next-btn" onclick="nextQuestion()">
+        ${qi + 1 < quiz.questions_data.length ? 'Next Question →' : 'See Results →'}
+      </button>
+    </div>`;
+}
+
+function selectAnswer(idx) {
+  if (state.answered) return;
+  state.answered = true;
+  const q = state.currentQuiz.questions_data[state.currentQ];
+  const btns = document.querySelectorAll('.option-btn');
+  btns.forEach(b => b.disabled = true);
+
+  const selected = btns[idx];
+  if (idx === q.ans) {
+    selected.classList.add('correct');
+    state.score++;
+  } else {
+    selected.classList.add('wrong');
+    btns[q.ans].classList.add('reveal');
+  }
+
+  const exp = document.getElementById('explanation');
+  exp.style.display = 'block';
+  exp.innerHTML = `<strong>${idx === q.ans ? '✓ Correct! ' : '✗ Not quite. '}</strong>${q.exp}`;
+
+  document.getElementById('next-wrap').style.display = 'block';
+  document.getElementById('progress-fill').style.width = ((state.currentQ + 1) / state.currentQuiz.questions_data.length * 100) + '%';
+}
+
+function nextQuestion() {
+  state.currentQ++;
+  if (state.currentQ >= state.currentQuiz.questions_data.length) {
+    showResult();
+  } else {
+    renderQuestion();
+  }
+}
+
+// ── RESULT ──
+function showResult() {
+  const quiz = state.currentQuiz;
+  const total = quiz.questions_data.length;
+  const score = state.score;
+  const pct = Math.round((score / total) * 100);
+  state.lastResult = { quizId: quiz.id, score, total, pct };
+
+  // update stats
+  if (!state.stats[quiz.id]) state.stats[quiz.id] = { attempts: 0, best: 0, history: [] };
+  state.stats[quiz.id].attempts++;
+  state.stats[quiz.id].best = Math.max(state.stats[quiz.id].best, score);
+  state.stats[quiz.id].history = [{ score, total, ts: Date.now() }, ...state.stats[quiz.id].history].slice(0, 20);
+  saveStats();
+  renderHome();
+
+  showScreen('result');
+
+  document.getElementById('res-correct').textContent = score;
+  document.getElementById('res-wrong').textContent = total - score;
+  document.getElementById('res-total').textContent = total;
+  document.getElementById('result-score-text').textContent = pct + '%';
+
+  const messages = [
+    [90, '🏆 Outstanding!', 'You nailed it — top of the class.'],
+    [70, '🎯 Well Done', 'Great performance! A little more and you\'re perfect.'],
+    [50, '📚 Good Effort', 'Solid attempt. Review the explanations and try again.'],
+    [0,  '💡 Keep Learning', 'Don\'t worry — every attempt makes you smarter.']
+  ];
+  const [, title, sub] = messages.find(([threshold]) => pct >= threshold);
+  document.getElementById('result-title').textContent = title;
+  document.getElementById('result-sub').textContent = sub;
+
+  const ringColor = quiz.type === 'gk' ? '#c8a96e' : '#6eb5c8';
+  const ring = document.getElementById('ring-fill');
+  ring.style.stroke = ringColor;
+  const circumference = 345.4;
+  ring.style.strokeDashoffset = circumference - (pct / 100 * circumference);
+
+  const cta = document.getElementById('result-cta');
+  cta.style.background = ringColor;
+  cta.style.color = quiz.type === 'gk' ? '#1a1408' : '#081318';
+}
+
+// ── DASHBOARD ──
+function renderDashboard() {
+  const content = document.getElementById('dash-content');
+  const hasAny = Object.keys(state.stats).length > 0;
+
+  if (!hasAny) {
+    content.innerHTML = `
+      <div class="empty-dash">
+        <p style="font-size:2rem">📊</p>
+        <p>No quiz data yet. Complete a quiz to see your stats here!</p>
+        <button class="btn-primary" style="background:var(--accent-gk);color:#1a1408" onclick="showScreen('home')">Start a Quiz →</button>
+      </div>`;
+    return;
+  }
+
+  // aggregate stats
+  let totalAttempts = 0, totalCorrect = 0, totalQs = 0;
+  QUIZZES.forEach(q => {
+    const s = state.stats[q.id];
+    if (!s) return;
+    totalAttempts += s.attempts;
+    s.history.forEach(h => { totalCorrect += h.score; totalQs += h.total; });
+  });
+  const overallPct = totalQs ? Math.round(totalCorrect / totalQs * 100) : 0;
+  const bestQuiz = QUIZZES.reduce((best, q) => {
+    const s = state.stats[q.id];
+    if (!s) return best;
+    const pct = Math.round(s.best / q.questions_data.length * 100);
+    return (!best || pct > best.pct) ? { name: q.title, pct } : best;
+  }, null);
+
+  // activity feed
+  let activity = [];
+  QUIZZES.forEach(q => {
+    const s = state.stats[q.id];
+    if (!s) return;
+    s.history.slice(0, 3).forEach(h => {
+      activity.push({ name: q.title, type: q.type, score: h.score, total: h.total, ts: h.ts });
+    });
+  });
+  activity.sort((a, b) => b.ts - a.ts);
+  activity = activity.slice(0, 6);
+
+  content.innerHTML = `
+    <div class="stats-strip">
+      <div class="stat-card">
+        <div class="stat-val" style="color:var(--accent-gk)">${totalAttempts}</div>
+        <div class="stat-label">Total Attempts</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" style="color:var(--correct)">${overallPct}%</div>
+        <div class="stat-label">Overall Accuracy</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" style="color:var(--accent-sci)">${totalCorrect}</div>
+        <div class="stat-label">Correct Answers</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" style="color:var(--muted)">${bestQuiz ? bestQuiz.pct + '%' : '—'}</div>
+        <div class="stat-label">Best Score</div>
+      </div>
+    </div>
+
+    <div class="dash-grid">
+      <div class="dash-card">
+        <div class="dash-card-title">Quiz Performance</div>
+        ${QUIZZES.map(q => {
+          const s = state.stats[q.id];
+          const pct = s ? Math.round(s.best / q.questions_data.length * 100) : 0;
+          const color = q.type === 'gk' ? 'var(--accent-gk)' : 'var(--accent-sci)';
+          return `
+          <div class="bar-item">
+            <div class="bar-header">
+              <span class="bar-label">${q.icon} ${q.title}</span>
+              <span class="bar-pct">${s ? pct + '%' : 'Not played'}</span>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill" style="width:${pct}%;background:${color}"></div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+
+      <div class="dash-card">
+        <div class="dash-card-title">Quiz Scores</div>
+        ${QUIZZES.map(q => {
+          const s = state.stats[q.id];
+          const color = q.type === 'gk' ? 'var(--accent-gk)' : 'var(--accent-sci)';
+          return `
+          <div class="quiz-row">
+            <div class="qr-dot" style="background:${color}"></div>
+            <div class="qr-name">${q.title}</div>
+            ${s ? `
+              <div>
+                <div class="qr-score" style="color:${color}">${s.best}/${q.questions_data.length}</div>
+                <div class="qr-attempts">${s.attempts} play${s.attempts > 1 ? 's' : ''}</div>
+              </div>` : '<div class="qr-attempts">—</div>'}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+
+    ${activity.length > 0 ? `
+    <div class="dash-card">
+      <div class="dash-card-title">Recent Activity</div>
+      <div class="activity-list">
+        ${activity.map(a => {
+          const color = a.type === 'gk' ? 'var(--accent-gk)' : 'var(--accent-sci)';
+          const pct = Math.round(a.score / a.total * 100);
+          const ago = formatAgo(a.ts);
+          return `
+          <div class="activity-item">
+            <div class="activity-dot" style="background:${color}"></div>
+            <span>Scored <strong>${a.score}/${a.total} (${pct}%)</strong> on <strong>${a.name}</strong></span>
+            <span style="margin-left:auto;font-size:11px">${ago}</span>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>` : ''}
+  `;
+}
+
+function formatAgo(ts) {
+  const diff = Date.now() - ts;
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return m + 'm ago';
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + 'h ago';
+  return Math.floor(h / 24) + 'd ago';
+}
+
+// Init
+renderHome();
+</script>
+</body>
+</html>
